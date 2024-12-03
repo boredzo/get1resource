@@ -60,7 +60,6 @@ int main(int argc, const char * argv[]) {
 		}
 
 		ResType const resType = NSHFSTypeCodeFromFileType(resourceTypeString);
-		ResID const resID = [resourceIDString integerValue];
 
 		OSStatus err = noErr;
 		HFSUniStr255 forkName;
@@ -81,22 +80,47 @@ int main(int argc, const char * argv[]) {
 			return EX_NOINPUT;
 		}
 
-		if (outputFH == nil) {
-			NSString *_Nonnull const outputFilename = [NSString stringWithFormat:@"Resource-%@-%i.dat", resourceTypeString, resID];
-			[[NSFileManager defaultManager] createFileAtPath:outputFilename contents:nil attributes:nil];
-			outputFH = [NSFileHandle fileHandleForWritingAtPath:outputFilename];
-		}
+		if (resourceIDString != nil) {
+			ResID const resID = [resourceIDString integerValue];
 
-		Handle const resHandle = Get1Resource(resType, resID);
-		if (! resHandle) {
-			err = ResError();
-			fprintf(stderr, "Couldn't get %s resource %i: %i/%s\n", resourceTypeString.UTF8String, resID, err, GetMacOSStatusCommentString(err));
-			return EX_DATAERR;
-		}
-		NSError *_Nullable error = nil;
-		if (! dumpResource(resHandle, outputFH, &error)) {
-			fprintf(stderr, "Couldn't write resource data: %s\n", error.localizedDescription);
-			return EX_IOERR;
+			if (outputFH == nil) {
+				NSString *_Nonnull const outputFilename = [NSString stringWithFormat:@"Resource-%@-%i.dat", resourceTypeString, resID];
+				[[NSFileManager defaultManager] createFileAtPath:outputFilename contents:nil attributes:nil];
+				outputFH = [NSFileHandle fileHandleForWritingAtPath:outputFilename];
+			}
+
+			Handle const resHandle = Get1Resource(resType, resID);
+			if (! resHandle) {
+				err = ResError();
+				fprintf(stderr, "Couldn't get %s resource %i: %i/%s\n", resourceTypeString.UTF8String, resID, err, GetMacOSStatusCommentString(err));
+				return EX_DATAERR;
+			}
+			NSError *_Nullable error = nil;
+			if (! dumpResource(resHandle, outputFH, &error)) {
+				fprintf(stderr, "Couldn't write resource data: %s\n", error.localizedDescription);
+				return EX_IOERR;
+			}
+		} else {
+			for (ResourceIndex idx = 1, numRsrcs = Count1Resources(resType); idx <= numRsrcs; ++idx) {
+				Handle const resHandle = Get1IndResource(resType, idx);
+				if (! resHandle) {
+					err = ResError();
+					fprintf(stderr, "Couldn't get %i'th %s resource: %i/%s\n", idx, resourceTypeString.UTF8String, err, GetMacOSStatusCommentString(err));
+					return EX_DATAERR;
+				}
+
+				ResID resID = -1;
+				GetResInfo(resHandle, &resID, /*type*/ NULL, /*name*/ NULL);
+				NSString *_Nonnull const outputFilename = [NSString stringWithFormat:@"Resource-%@-%i.dat", resourceTypeString, resID];
+				[[NSFileManager defaultManager] createFileAtPath:outputFilename contents:nil attributes:nil];
+				outputFH = [NSFileHandle fileHandleForWritingAtPath:outputFilename];
+
+				NSError *_Nullable error = nil;
+				if (! dumpResource(resHandle, outputFH, &error)) {
+					fprintf(stderr, "Couldn't write resource data: %s\n", error.localizedDescription);
+					return EX_IOERR;
+				}
+			}
 		}
 	}
 	return EXIT_SUCCESS;
