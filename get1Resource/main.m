@@ -30,8 +30,7 @@ int main(int argc, const char * argv[]) {
 					outputFH = [NSFileHandle fileHandleForWritingAtPath:arg];
 				}
 				expectOutputPath = false;
-			}
-			if ([arg isEqualToString:@"-useDF"]) {
+			} else if ([arg isEqualToString:@"-useDF"]) {
 				useDF = true;
 			} else if ([arg isEqualToString:@"-o"]) {
 				expectOutputPath = true;
