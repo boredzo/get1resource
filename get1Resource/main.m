@@ -51,7 +51,7 @@ int main(int argc, const char * argv[]) {
 
 		FSRef inputRef;
 		if (! CFURLGetFSRef((__bridge CFURLRef)inputURL, &inputRef)) {
-			fprintf(stderr, "Couldn't get FSRef\n");
+			fprintf(stderr, "Couldn't get FSRef for %s\n", inputURL.path.UTF8String);
 			return EX_NOINPUT;
 		}
 
