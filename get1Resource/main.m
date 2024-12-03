@@ -128,7 +128,8 @@ int main(int argc, const char * argv[]) {
 
 				ResID resID = -1;
 				GetResInfo(resHandle, &resID, /*type*/ NULL, /*name*/ NULL);
-				NSString *_Nonnull const outputFilename = [NSString stringWithFormat:@"Resource-%@-%i.dat", resourceTypeString, resID];
+				NSString *_Nonnull const ext = @"dat";
+				NSString *_Nonnull const outputFilename = [NSString stringWithFormat:@"Resource-%@-%i.%@", resourceTypeString, resID, ext];
 				NSURL *_Nonnull const outputFileURL = [outputDirectoryURL URLByAppendingPathComponent:outputFilename isDirectory:false];
 				[mgr createFileAtPath:outputFileURL.path contents:nil attributes:nil];
 				outputFH = [NSFileHandle fileHandleForWritingToURL:outputFileURL error:&error];
