@@ -16,19 +16,16 @@ int main(int argc, const char * argv[]) {
 		[argsEnum nextObject];
 
 		bool useDF = false;
-		NSFileHandle *_Nullable outputFH = nil;
 		bool expectOutputPath = false;
+		NSString *_Nullable outputPath = nil;
+		NSFileHandle *_Nullable outputFH = nil;
 		NSURL *_Nullable inputURL = nil;
 		NSString *_Nullable resourceTypeString = nil;
 		NSString *_Nullable resourceIDString = nil;
 
 		for (NSString *_Nonnull const arg in argsEnum) {
 			if (expectOutputPath) {
-				if ([arg isEqualToString:@"-"]) {
-					outputFH = [NSFileHandle fileHandleWithStandardOutput];
-				} else {
-					outputFH = [NSFileHandle fileHandleForWritingAtPath:arg];
-				}
+				outputPath = arg;
 				expectOutputPath = false;
 			} else if ([arg isEqualToString:@"-useDF"]) {
 				useDF = true;
@@ -80,6 +77,12 @@ int main(int argc, const char * argv[]) {
 		}
 
 		if (resourceIDString != nil) {
+			if ([outputPath isEqualToString:@"-"]) {
+				outputFH = [NSFileHandle fileHandleWithStandardOutput];
+			} else {
+				outputFH = [NSFileHandle fileHandleForWritingAtPath:outputPath];
+			}
+
 			ResID const resID = [resourceIDString integerValue];
 
 			if (outputFH == nil) {
@@ -99,7 +102,22 @@ int main(int argc, const char * argv[]) {
 				fprintf(stderr, "Couldn't write resource data: %s\n", error.localizedDescription);
 				return EX_IOERR;
 			}
-		} else {
+		} else /*Dump all resources of some type.*/ {
+			if (outputPath == nil) {
+				outputPath = [inputURL.path stringByAppendingPathComponent:@"rsrcd"];
+			}
+			NSURL *_Nonnull const outputDirectoryURL = [NSURL fileURLWithPath:outputPath isDirectory:true];
+
+			NSError *_Nullable error = nil;
+			NSFileManager *_Nonnull const mgr = [NSFileManager defaultManager];
+			bool const createdOutputDir = [mgr createDirectoryAtURL:outputDirectoryURL withIntermediateDirectories:false attributes:nil error:&error];
+			if (! createdOutputDir) {
+				if (error.domain != NSCocoaErrorDomain || error.code != NSFileWriteFileExistsError) {
+					fprintf(stderr, "Couldn't create output directory at %s: %s\n", outputDirectoryURL.path.UTF8String, error.localizedDescription.UTF8String);
+					return EX_CANTCREAT;
+				}
+			}
+
 			for (ResourceIndex idx = 1, numRsrcs = Count1Resources(resType); idx <= numRsrcs; ++idx) {
 				Handle const resHandle = Get1IndResource(resType, idx);
 				if (! resHandle) {
@@ -111,10 +129,14 @@ int main(int argc, const char * argv[]) {
 				ResID resID = -1;
 				GetResInfo(resHandle, &resID, /*type*/ NULL, /*name*/ NULL);
 				NSString *_Nonnull const outputFilename = [NSString stringWithFormat:@"Resource-%@-%i.dat", resourceTypeString, resID];
-				[[NSFileManager defaultManager] createFileAtPath:outputFilename contents:nil attributes:nil];
-				outputFH = [NSFileHandle fileHandleForWritingAtPath:outputFilename];
+				NSURL *_Nonnull const outputFileURL = [outputDirectoryURL URLByAppendingPathComponent:outputFilename isDirectory:false];
+				[mgr createFileAtPath:outputFileURL.path contents:nil attributes:nil];
+				outputFH = [NSFileHandle fileHandleForWritingToURL:outputFileURL error:&error];
+				if (outputFH == nil) {
+					fprintf(stderr, "Couldn't open output file %s: %s\n", outputFileURL.path.UTF8String, error.localizedDescription.UTF8String);
+					return EX_CANTCREAT;
+				}
 
-				NSError *_Nullable error = nil;
 				if (! dumpResource(resHandle, outputFH, &error)) {
 					fprintf(stderr, "Couldn't write resource data: %s\n", error.localizedDescription);
 					return EX_IOERR;
