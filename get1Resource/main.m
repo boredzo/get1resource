@@ -8,6 +8,8 @@
 #import <Foundation/Foundation.h>
 #import <sysexits.h>
 
+static bool dumpResource(Handle _Nonnull const resHandle, NSFileHandle *_Nonnull const outputFH, NSError *_Nullable *_Nonnull const outError);
+
 int main(int argc, const char * argv[]) {
 	@autoreleasepool {
 		NSEnumerator <NSString *> *_Nonnull const argsEnum = [[NSProcessInfo processInfo].arguments objectEnumerator];
@@ -91,15 +93,19 @@ int main(int argc, const char * argv[]) {
 			fprintf(stderr, "Couldn't get %s resource %i: %i/%s\n", resourceTypeString.UTF8String, resID, err, GetMacOSStatusCommentString(err));
 			return EX_DATAERR;
 		}
-		HLock(resHandle);
-		NSData *_Nonnull const resData = [NSData dataWithBytesNoCopy:*resHandle length:GetHandleSize(resHandle) freeWhenDone:false];
 		NSError *_Nullable error = nil;
-		bool const wrote = [outputFH writeData:resData error:&error];
-		HUnlock(resHandle);
-		if (! wrote) {
+		if (! dumpResource(resHandle, outputFH, &error)) {
 			fprintf(stderr, "Couldn't write resource data: %s\n", error.localizedDescription);
 			return EX_IOERR;
 		}
 	}
 	return EXIT_SUCCESS;
+}
+
+static bool dumpResource(Handle _Nonnull const resHandle, NSFileHandle *_Nonnull const outputFH, NSError *_Nullable *_Nonnull const outError) {
+	HLock(resHandle);
+	NSData *_Nonnull const resData = [NSData dataWithBytesNoCopy:*resHandle length:GetHandleSize(resHandle) freeWhenDone:false];
+	bool const wrote = [outputFH writeData:resData error:outError];
+	HUnlock(resHandle);
+	return wrote;
 }
