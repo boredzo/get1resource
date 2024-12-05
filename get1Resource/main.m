@@ -129,9 +129,34 @@ int main(int argc, const char * argv[]) {
 					return EX_DATAERR;
 				}
 
+				NSString *_Nonnull ext = @"dat";
+				CFStringRef _Nullable const resTypeUTString = UTCreateStringForOSType(resType);
+				if (resTypeUTString != NULL) {
+					CFStringRef _Nullable uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassOSType, resTypeUTString, /*conformingTo*/ NULL);
+					if (uti != NULL) {
+						CFStringRef _Nullable extCF = UTTypeCopyPreferredTagWithClass(uti, kUTTagClassFilenameExtension);
+						while (uti != NULL && extCF == NULL) {
+							CFDictionaryRef _Nullable const declaration = UTTypeCopyDeclaration(uti);
+							if (declaration == NULL) {
+								break;
+							}
+							CFStringRef _Nullable parentUTI = (__bridge_retained CFStringRef)[(__bridge NSArray <NSString *> *)CFDictionaryGetValue(declaration, kUTTypeConformsToKey) firstObject];
+							if (parentUTI != NULL) {
+								extCF = UTTypeCopyPreferredTagWithClass(uti, kUTTagClassFilenameExtension);
+							}
+							CFRelease(uti);
+							uti = parentUTI;
+						}
+						if (extCF != NULL) {
+							ext = (__bridge_transfer NSString *_Nonnull)extCF;
+						}
+						CFRelease(uti);
+					}
+					CFRelease(resTypeUTString);
+				}
+
 				ResID resID = -1;
 				GetResInfo(resHandle, &resID, /*type*/ NULL, /*name*/ NULL);
-				NSString *_Nonnull const ext = @"dat";
 				NSString *_Nonnull const outputFilename = [NSString stringWithFormat:@"Resource-%@-%i.%@", resourceTypeString, resID, ext];
 				NSURL *_Nonnull const outputFileURL = [outputDirectoryURL URLByAppendingPathComponent:outputFilename isDirectory:false];
 				[mgr createFileAtPath:outputFileURL.path contents:nil attributes:nil];
