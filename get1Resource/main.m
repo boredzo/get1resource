@@ -118,7 +118,10 @@ int main(int argc, const char * argv[]) {
 				}
 			}
 
-			for (ResourceIndex idx = 1, numRsrcs = Count1Resources(resType); idx <= numRsrcs; ++idx) {
+			ResourceIndex const numRsrcs = Count1Resources(resType);
+			fprintf(stderr, "Found %i resources of type %s\n", numRsrcs, resourceTypeString.UTF8String);
+
+			for (ResourceIndex idx = 1; idx <= numRsrcs; ++idx) {
 				Handle const resHandle = Get1IndResource(resType, idx);
 				if (! resHandle) {
 					err = ResError();
