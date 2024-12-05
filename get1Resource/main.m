@@ -104,7 +104,7 @@ int main(int argc, const char * argv[]) {
 			}
 		} else /*Dump all resources of some type.*/ {
 			if (outputPath == nil) {
-				outputPath = [inputURL.path stringByAppendingPathComponent:@"rsrcd"];
+				outputPath = [inputURL.path stringByAppendingPathExtension:@"rsrcd"];
 			}
 			NSURL *_Nonnull const outputDirectoryURL = [NSURL fileURLWithPath:outputPath isDirectory:true];
 
