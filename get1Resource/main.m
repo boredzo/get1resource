@@ -10,6 +10,17 @@
 
 static bool dumpResource(Handle _Nonnull const resHandle, NSFileHandle *_Nonnull const outputFH, NSError *_Nullable *_Nonnull const outError);
 
+static void print_help(FILE *_Nonnull const outFile) {
+	fprintf(outFile, "usage: get1Resource [options] input-file resource-type [resource-ID]\n");
+	fprintf(outFile, "With a resource ID, extract that specified resource to a new file or stdout.\n");
+	fprintf(outFile, "Without a resource ID, extract all resources of that type.\n");
+	fprintf(outFile, "\n");
+	fprintf(outFile, "Options:\n");
+	fprintf(outFile, "--help\tPrint this text.\n");
+	fprintf(outFile, "-useDF\tRead from the data fork of the input-file. Default is to read the resource fork.\n");
+	fprintf(outFile, "-o OUTPUT_PATH\tWrite output to OUTPUT_PATH. For one resource, this is a file; for all resources of a type, it is a folder to place output files in.\n");
+}
+
 int main(int argc, const char * argv[]) {
 	@autoreleasepool {
 		NSEnumerator <NSString *> *_Nonnull const argsEnum = [[NSProcessInfo processInfo].arguments objectEnumerator];
@@ -29,6 +40,9 @@ int main(int argc, const char * argv[]) {
 				expectOutputPath = false;
 			} else if ([arg isEqualToString:@"-useDF"]) {
 				useDF = true;
+			} else if ([arg isEqualToString:@"--help"]) {
+				print_help(stdout);
+				return EXIT_SUCCESS;
 			} else if ([arg isEqualToString:@"-o"]) {
 				expectOutputPath = true;
 			} else {
@@ -43,6 +57,11 @@ int main(int argc, const char * argv[]) {
 					return EX_USAGE;
 				}
 			}
+		}
+
+		if (inputURL == nil) {
+			print_help(stderr);
+			return EX_USAGE;
 		}
 
 		FSRef inputRef;
